@@ -6,27 +6,11 @@ namespace LegacyApp
     {
         public bool AddUser(string firstName, string lastName, string email, DateTime dateOfBirth, int clientId)
         {
-            if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName))
-            {
-                return false;
-            }
+            if (!CheckIfDataIsCorrect(firstName, lastName, email)) return false;
 
-            if (!email.Contains("@") && !email.Contains("."))
-            {
-                return false;
-            }
+            if (!IsAtLeast21(dateOfBirth)) return false;
 
-            var now = DateTime.Now;
-            int age = now.Year - dateOfBirth.Year;
-            if (now.Month < dateOfBirth.Month || (now.Month == dateOfBirth.Month && now.Day < dateOfBirth.Day)) age--;
-
-            if (age < 21)
-            {
-                return false;
-            }
-
-            var clientRepository = new ClientRepository();
-            var client = clientRepository.GetById(clientId);
+            var client = ClientExists(clientId);
 
             var user = new User
             {
@@ -37,6 +21,14 @@ namespace LegacyApp
                 LastName = lastName
             };
 
+            if (!SetAndCheckCreditLimit(client, user)) return false;
+
+            UserDataAccess.AddUser(user);
+            return true;
+        }
+
+        public bool SetAndCheckCreditLimit(Client client, User user)
+        {
             if (client.Type == "VeryImportantClient")
             {
                 user.HasCreditLimit = false;
@@ -65,7 +57,42 @@ namespace LegacyApp
                 return false;
             }
 
-            UserDataAccess.AddUser(user);
+            return true;
+        }
+
+        public Client ClientExists(int clientId)
+        {
+            var clientRepository = new ClientRepository();
+            var client = clientRepository.GetById(clientId);
+            return client;
+        }
+
+        public bool IsAtLeast21(DateTime dateOfBirth)
+        {
+            var now = DateTime.Now;
+            int age = now.Year - dateOfBirth.Year;
+            if (now.Month < dateOfBirth.Month || (now.Month == dateOfBirth.Month && now.Day < dateOfBirth.Day)) age--;
+
+            if (age < 21)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public bool CheckIfDataIsCorrect(string firstName, string lastName, string email)
+        {
+            if (string.IsNullOrEmpty(firstName) || string.IsNullOrEmpty(lastName))
+            {
+                return false;
+            }
+
+            if (!email.Contains("@") && !email.Contains("."))
+            {
+                return false;
+            }
+
             return true;
         }
     }
